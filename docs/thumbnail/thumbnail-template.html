@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code &amp; Automate Thumbnails</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: controls column beside a 16:9 live preview; stacks on phones. The thumbnail itself uses a fixed palette so every episode looks the same. */
+  :root {
+    --bg: #eef1f7;
+    --panel: #ffffff;
+    --fg: #17213a;
+    --muted: #5a6680;
+    --line: #d5dbe8;
+    --accent: #2a4fd6;
+    --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10162a; --panel: #18203a; --fg: #e8ecf6; --muted: #9aa6c2; --line: #2c3758; --accent: #7d9bff;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10162a; --panel: #18203a; --fg: #e8ecf6; --muted: #9aa6c2; --line: #2c3758; --accent: #7d9bff;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+    padding-inline: 16px; padding-block: 28px 48px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 24px; }
+  header h1 { font-family: var(--font-display); font-weight: 800; font-size: 40px; line-height: 1; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+  header p { margin: 8px 0 0; color: var(--muted); max-width: 65ch; }
+  .layout { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  form { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; }
+  .field { display: grid; gap: 6px; }
+  label { font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  input[type="text"], input[type="number"], select {
+    width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+  }
+  input[type="file"] { font: inherit; font-size: 13px; color: var(--muted); max-width: 100%; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 0; }
+  .row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
+  button { font: inherit; font-weight: 600; color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer; justify-self: start; }
+  button:hover { border-color: var(--accent); }
+  .preview { display: grid; gap: 10px; min-width: 0; }
+  .preview img { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; border: 1px solid var(--line); background: #1d3bb3; }
+  .preview .hint b { color: var(--fg); font-weight: 600; }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Code &amp; Automate Thumbnails</h1>
+    <p>Pick an episode, adjust the title, then save the 1280×720 image. Wrap words in *asterisks* to highlight them in yellow.</p>
+  </header>
+
+  <div class="layout">
+    <form id="controls" autocomplete="off">
+      <div class="field">
+        <label for="preset">Episode</label>
+        <select id="preset"></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="epnum">Number</label>
+          <input id="epnum" type="number" min="0" max="99" value="8">
+        </div>
+        <div class="field">
+          <label for="module">Module</label>
+          <select id="module"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="title">Title</label>
+        <input id="title" type="text" maxlength="70" value="Your First *Green Scenario*">
+        <p class="hint">Say the outcome, not the tool alone. Up to three lines fit.</p>
+      </div>
+      <div class="field">
+        <label for="status">Badge</label>
+        <select id="status">
+          <option value="PASSED">Passed (green)</option>
+          <option value="FAILED">Failed (red)</option>
+          <option value="">No badge</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="shot">Screenshot (optional)</label>
+        <input id="shot" type="file" accept="image/*">
+        <p class="hint">Replaces the drawn app window with your own screen grab.</p>
+      </div>
+      <button type="button" id="clearShot" hidden>Remove screenshot</button>
+    </form>
+
+    <div class="preview">
+      <img id="out" alt="Thumbnail preview">
+      <p class="hint"><b>To save:</b> right-click the image and choose “Save image as” (long-press on a phone). It saves at full 1280×720.</p>
+    </div>
+  </div>
+</div>
+
+<canvas id="c" width="1280" height="720"></canvas>
+
+<script>
+const MODULES = [
+  "Module 1 · Foundations",
+  "Module 2 · First passing test",
+  "Module 3 · A real framework",
+  "Module 4 · Scale and CI",
+  "Bonus recipe"
+];
+const EPISODES = [
+  [0, 0, "Automate Your WPF App with *FlaUI + Reqnroll*"],
+  [1, 0, "From Requirement to *Automated Test*"],
+  [2, 0, "Meet the *Demo WPF App*"],
+  [3, 0, "Write *Acceptance Criteria* Testers Love"],
+  [4, 0, "Test Cases to *Gherkin* in Minutes"],
+  [5, 1, "Set Up *FlaUI, Reqnroll* and NUnit"],
+  [6, 1, "Find Any WPF Control with *AutomationId*"],
+  [7, 1, "Launch and Close Your App with *FlaUI*"],
+  [8, 1, "Your First *Green Scenario*"],
+  [9, 2, "*Page Objects* for WPF Windows"],
+  [10, 2, "Stop *Flaky* UI Tests"],
+  [11, 2, "*Data-Driven* Reqnroll Scenarios"],
+  [12, 2, "Automate *Grids and ComboBoxes*"],
+  [13, 2, "*Screenshots* When Tests Fail"],
+  [14, 3, "*Smoke vs Regression* with Tags"],
+  [15, 3, "*HTML Reports* Your Manager Will Read"],
+  [16, 3, "Run WPF Tests in *GitHub Actions*"],
+  [17, 3, "Requirement to CI in *One Video*"]
+];
+
+// Fixed thumbnail palette, independent of the page theme.
+const T = {
+  bg1: "#1d3bb3", bg2: "#13246e", grid: "rgba(255,255,255,0.07)",
+  ink: "#ffffff", soft: "rgba(255,255,255,0.72)", yellow: "#ffcf3f", dark: "#111a3d",
+  card: "#f6f8fc", bar: "#e3e8f3", field: "#ffffff", fieldLine: "#c9d1e3", text: "#1d2640", label: "#5d6884",
+  button: "#2a4fd6", pass: "#20b26b", fail: "#e0453a"
+};
+
+const $ = id => document.getElementById(id);
+const canvas = $("c"), ctx = canvas.getContext("2d");
+let shot = null;
+
+for (const [n, , title] of EPISODES) $("preset").add(new Option(`${n}. ${title.replaceAll("*", "")}`, n));
+$("preset").add(new Option("Custom", "custom"));
+MODULES.forEach((m, i) => $("module").add(new Option(m, i)));
+
+function applyPreset(n) {
+  const ep = EPISODES.find(e => e[0] === n);
+  if (!ep) return;
+  $("epnum").value = ep[0];
+  $("module").value = ep[1];
+  $("title").value = ep[2];
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+}
+
+// Splits "A *b c* d" into words that remember whether they are highlighted.
+function tokens(text) {
+  const out = [];
+  let hi = false;
+  text.split(/(\*)/).forEach(part => {
+    if (part === "*") { hi = !hi; return; }
+    part.split(/\s+/).filter(Boolean).forEach(w => out.push({ w, hi }));
+  });
+  return out;
+}
+
+function layoutTitle(words, maxW, maxLines) {
+  for (let size = 132; size >= 60; size -= 4) {
+    ctx.font = `800 ${size}px "Barlow Condensed"`;
+    const space = ctx.measureText(" ").width;
+    const lines = [[]];
+    let width = 0, ok = true;
+    for (const t of words) {
+      const w = ctx.measureText(t.w.toUpperCase()).width;
+      if (w > maxW) { ok = false; break; }
+      if (width > 0 && width + space + w > maxW) { lines.push([]); width = 0; }
+      lines[lines.length - 1].push(t);
+      width += (width > 0 ? space : 0) + w;
+    }
+    // Keep the last baseline clear of the episode block.
+    const lastBaseline = 150 + size * 0.82 + (lines.length - 1) * size * 0.98;
+    if (ok && lines.length <= maxLines && lastBaseline <= 500) return { size, lines, space };
+  }
+  ctx.font = `800 60px "Barlow Condensed"`;
+  return { size: 60, lines: [words], space: ctx.measureText(" ").width };
+}
+
+function drawBackground() {
+  const g = ctx.createLinearGradient(0, 0, 1280, 720);
+  g.addColorStop(0, T.bg1);
+  g.addColorStop(1, T.bg2);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1280, 720);
+  // Dot grid, a nod to pixel coordinates the mouse moves through.
+  ctx.fillStyle = T.grid;
+  for (let x = 24; x < 1280; x += 32) for (let y = 24; y < 720; y += 32) ctx.fillRect(x, y, 3, 3);
+}
+
+function drawWindowArt(x, y, w, h) {
+  ctx.save();
+  ctx.shadowColor = "rgba(5,10,40,0.45)";
+  ctx.shadowBlur = 40;
+  ctx.shadowOffsetY = 16;
+  ctx.fillStyle = T.card;
+  roundRect(x, y, w, h, 14);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  roundRect(x, y, w, h, 14);
+  ctx.clip();
+  ctx.fillStyle = T.bar;
+  ctx.fillRect(x, y, w, 46);
+  ctx.fillStyle = T.text;
+  ctx.font = `500 19px "IBM Plex Sans"`;
+  ctx.textBaseline = "middle";
+  ctx.fillText(shot ? "Customer Manager" : "Add customer", x + 20, y + 23);
+  // Windows caption buttons: minimise, maximise, close.
+  ctx.strokeStyle = T.label;
+  ctx.lineWidth = 2;
+  const cy = y + 23, right = x + w;
+  ctx.beginPath(); ctx.moveTo(right - 120, cy); ctx.lineTo(right - 106, cy); ctx.stroke();
+  ctx.strokeRect(right - 80, cy - 7, 14, 14);
+  ctx.beginPath(); ctx.moveTo(right - 40, cy - 7); ctx.lineTo(right - 26, cy + 7); ctx.moveTo(right - 26, cy - 7); ctx.lineTo(right - 40, cy + 7); ctx.stroke();
+
+  const bodyY = y + 46, bodyH = h - 46;
+  if (shot) {
+    const s = Math.max(w / shot.width, bodyH / shot.height);
+    const dw = shot.width * s, dh = shot.height * s;
+    ctx.drawImage(shot, x + (w - dw) / 2, bodyY, dw, dh);
+  } else {
+    const fx = x + 28, fw = w - 56;
+    const fields = [["Full name", "Margaret Hamilton"], ["Email", "margaret@example.com"]];
+    fields.forEach(([label, value], i) => {
+      const fy = bodyY + 28 + i * 96;
+      ctx.fillStyle = T.label;
+      ctx.font = `500 16px "IBM Plex Sans"`;
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(label, fx, fy + 14);
+      ctx.fillStyle = T.field;
+      ctx.strokeStyle = T.fieldLine;
+      ctx.lineWidth = 1.5;
+      roundRect(fx, fy + 24, fw, 46, 6);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = T.text;
+      ctx.font = `400 19px "IBM Plex Sans"`;
+      ctx.textBaseline = "middle";
+      ctx.fillText(value, fx + 14, fy + 47);
+    });
+    // Save button with the mouse pointer on it.
+    const bw = 130, bh = 48, bx = x + w - 28 - bw, by = y + h - 28 - bh;
+    ctx.fillStyle = T.button;
+    roundRect(bx, by, bw, bh, 7);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `600 20px "IBM Plex Sans"`;
+    ctx.textAlign = "center";
+    ctx.fillText("Save", bx + bw / 2, by + bh / 2);
+    ctx.textAlign = "left";
+    drawCursor(bx + bw * 0.62, by + bh * 0.55);
+  }
+  ctx.restore();
+}
+
+function drawCursor(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1.6, 1.6);
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(0, 22); ctx.lineTo(6, 17); ctx.lineTo(10, 26); ctx.lineTo(14, 24); ctx.lineTo(10, 15); ctx.lineTo(17, 15);
+  ctx.closePath();
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = "round";
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawBadge(text, x, y) {
+  if (!text) return;
+  ctx.font = `600 26px "IBM Plex Mono"`;
+  const label = (text === "PASSED" ? "✓ " : "✗ ") + text;
+  const w = ctx.measureText(label).width + 44, h = 56;
+  ctx.save();
+  ctx.shadowColor = "rgba(5,10,40,0.4)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = text === "PASSED" ? T.pass : T.fail;
+  roundRect(x - w, y, w, h, h / 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, x - w + 22, y + h / 2 + 1);
+}
+
+function draw() {
+  const num = Math.max(0, parseInt($("epnum").value, 10) || 0);
+  const module = MODULES[+$("module").value] ?? "";
+  const status = $("status").value;
+  ctx.clearRect(0, 0, 1280, 720);
+  ctx.textAlign = "left";
+  drawBackground();
+
+  // Eyebrow: module name.
+  ctx.fillStyle = T.soft;
+  ctx.font = `600 24px "IBM Plex Mono"`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(module.toUpperCase(), 72, 104);
+
+  // Title, highlighted words in yellow.
+  const { size, lines, space } = layoutTitle(tokens($("title").value || "Episode title"), 640, 3);
+  ctx.font = `800 ${size}px "Barlow Condensed"`;
+  const lineH = size * 0.98;
+  let ty = 150 + size * 0.82;
+  for (const line of lines) {
+    let tx = 72;
+    for (const t of line) {
+      const word = t.w.toUpperCase();
+      ctx.fillStyle = t.hi ? T.yellow : T.ink;
+      ctx.fillText(word, tx, ty);
+      tx += ctx.measureText(word).width + space;
+    }
+    ty += lineH;
+  }
+
+  // Episode number block.
+  const bx = 72, by = 548, bs = 112;
+  ctx.fillStyle = T.yellow;
+  roundRect(bx, by, bs, bs, 12);
+  ctx.fill();
+  ctx.fillStyle = T.dark;
+  ctx.textAlign = "center";
+  ctx.font = `600 20px "IBM Plex Mono"`;
+  ctx.fillText("EP", bx + bs / 2, by + 32);
+  ctx.font = `800 70px "Barlow Condensed"`;
+  ctx.fillText(String(num).padStart(2, "0"), bx + bs / 2, by + 96);
+  ctx.textAlign = "left";
+
+  // Series name and stack.
+  ctx.fillStyle = T.ink;
+  ctx.font = `800 40px "Barlow Condensed"`;
+  ctx.fillText("CODE & AUTOMATE", bx + bs + 24, by + 52);
+  ctx.fillStyle = T.soft;
+  ctx.font = `500 20px "IBM Plex Mono"`;
+  ctx.fillText("FlaUI · Reqnroll · NUnit", bx + bs + 24, by + 88);
+
+  drawWindowArt(760, 168, 448, 404);
+  drawBadge(status, 1232, 116);
+
+  $("out").src = canvas.toDataURL("image/png");
+}
+
+function save() {
+  try {
+    localStorage.setItem("thumb", JSON.stringify({
+      preset: $("preset").value, epnum: $("epnum").value, module: $("module").value,
+      title: $("title").value, status: $("status").value
+    }));
+  } catch (e) { /* storage unavailable; the form still works */ }
+}
+
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem("thumb") || "null");
+    if (!s) return false;
+    for (const k of ["preset", "epnum", "module", "title", "status"]) if (s[k] != null) $(k).value = s[k];
+    return true;
+  } catch (e) { return false; }
+}
+
+$("preset").addEventListener("change", e => {
+  if (e.target.value !== "custom") applyPreset(+e.target.value);
+  draw(); save();
+});
+for (const id of ["epnum", "module", "title", "status"]) {
+  $(id).addEventListener("input", () => {
+    if (id !== "status" && id !== "module") $("preset").value = "custom";
+    draw(); save();
+  });
+}
+$("shot").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => { shot = img; $("clearShot").hidden = false; draw(); };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+$("clearShot").addEventListener("click", () => {
+  shot = null; $("shot").value = ""; $("clearShot").hidden = true; draw();
+});
+$("controls").addEventListener("submit", e => e.preventDefault());
+
+if (!restore()) { $("preset").value = 8; applyPreset(8); }
+// Draw once straight away, then again when the fonts arrive so the canvas uses them.
+draw();
+Promise.all([
+  document.fonts.load('800 100px "Barlow Condensed"'),
+  document.fonts.load('600 20px "IBM Plex Mono"'),
+  document.fonts.load('500 20px "IBM Plex Mono"'),
+  document.fonts.load('500 20px "IBM Plex Sans"'),
+  document.fonts.load('400 20px "IBM Plex Sans"'),
+  document.fonts.load('600 20px "IBM Plex Sans"')
+]).then(draw, draw);
+</script>
+</body>
+</html>
