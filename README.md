@@ -16,6 +16,23 @@ Sign in with `admin` / `Password1!`. Customers are stored in `%LOCALAPPDATA%\Cus
 dotnet run --project src/CustomerManager.App -- --reset-data
 ```
 
+## Run the UI tests
+
+The suite drives the real app with the mouse and keyboard, so run it on a Windows desktop session and don't touch the mouse while it runs.
+
+```
+dotnet build
+dotnet test tests/CustomerManager.UiTests
+```
+
+Each scenario launches the app with its own data file, signs in and works through the "Add a customer" story (`tests/CustomerManager.UiTests/Features/AddCustomer.feature`). Afterwards, open the HTML report at `tests/CustomerManager.UiTests/bin/Debug/net8.0-windows/TestResults/report.html`. Failed steps get a screenshot attached in the report and in the NUnit results.
+
+Run only the smoke scenarios:
+
+```
+dotnet test tests/CustomerManager.UiTests --filter Category=smoke
+```
+
 ## Repository layout
 
 ```

@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -6,6 +6,10 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6A1F3C2E-9B4D-4E57-8C21-3D5A7E0B9F10}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomerManager.App", "src\CustomerManager.App\CustomerManager.App.csproj", "{B3D2E1F4-5A6C-4B7D-9E8F-0A1B2C3D4E5F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CCAFD095-D2E1-4B8D-AC55-1E8CFB178ABB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomerManager.UiTests", "tests\CustomerManager.UiTests\CustomerManager.UiTests.csproj", "{6B5E86C0-BD8D-43DD-ACCF-4E691ABA639A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +21,13 @@ Global
 		{B3D2E1F4-5A6C-4B7D-9E8F-0A1B2C3D4E5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3D2E1F4-5A6C-4B7D-9E8F-0A1B2C3D4E5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3D2E1F4-5A6C-4B7D-9E8F-0A1B2C3D4E5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6B5E86C0-BD8D-43DD-ACCF-4E691ABA639A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B5E86C0-BD8D-43DD-ACCF-4E691ABA639A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B5E86C0-BD8D-43DD-ACCF-4E691ABA639A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B5E86C0-BD8D-43DD-ACCF-4E691ABA639A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B3D2E1F4-5A6C-4B7D-9E8F-0A1B2C3D4E5F} = {6A1F3C2E-9B4D-4E57-8C21-3D5A7E0B9F10}
+		{6B5E86C0-BD8D-43DD-ACCF-4E691ABA639A} = {CCAFD095-D2E1-4B8D-AC55-1E8CFB178ABB}
 	EndGlobalSection
 EndGlobal
