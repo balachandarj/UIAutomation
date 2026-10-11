@@ -1,0 +1,57 @@
+<Window x:Class="CustomerManager.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        AutomationProperties.AutomationId="MainWindow"
+        Title="Customer Manager"
+        Width="900" Height="560"
+        WindowStartupLocation="CenterScreen">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top" AutomationProperties.AutomationId="MainMenu">
+            <MenuItem Header="_File" AutomationProperties.AutomationId="FileMenu">
+                <MenuItem Header="E_xit" AutomationProperties.AutomationId="ExitMenuItem" Command="{Binding ExitCommand}" />
+            </MenuItem>
+            <MenuItem Header="_Customers" AutomationProperties.AutomationId="CustomersMenu">
+                <MenuItem Header="_Add customer..." AutomationProperties.AutomationId="AddCustomerMenuItem" Command="{Binding AddCustomerCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock AutomationProperties.AutomationId="StatusText" Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Margin="0,0,0,12">
+                <Button DockPanel.Dock="Right"
+                        AutomationProperties.AutomationId="AddCustomerButton"
+                        Content="Add customer"
+                        Command="{Binding AddCustomerCommand}" />
+                <TextBlock Text="Customers" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </DockPanel>
+
+            <DataGrid Grid.Row="1"
+                      AutomationProperties.AutomationId="CustomersGrid"
+                      ItemsSource="{Binding Customers}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      SelectionMode="Single"
+                      HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Full name" Binding="{Binding FullName}" Width="2*" />
+                    <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="2*" />
+                    <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="*" />
+                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="*" />
+                    <DataGridTextColumn Header="Customer since" Binding="{Binding CustomerSince, StringFormat=yyyy-MM-dd}" Width="*" />
+                    <DataGridCheckBoxColumn Header="Newsletter" Binding="{Binding SubscribeToNewsletter}" Width="Auto" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</Window>

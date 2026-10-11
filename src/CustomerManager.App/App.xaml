@@ -1,0 +1,24 @@
+<Application x:Class="CustomerManager.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <!-- Validation message: hidden (and so absent from the UI Automation tree) until it has text. -->
+        <Style x:Key="ErrorText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#C62828" />
+            <Setter Property="Margin" Value="0,2,0,8" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="Label">
+            <Setter Property="Padding" Value="0,8,0,2" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="MinWidth" Value="90" />
+            <Setter Property="Padding" Value="12,4" />
+        </Style>
+    </Application.Resources>
+</Application>
